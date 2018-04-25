@@ -18,3 +18,6 @@ This script has following limitations
 
 - Runs only on Debian
 - Usage section needs more contribution
+
+## LICENSE
+This script is licensed under APL V2
