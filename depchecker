@@ -1,0 +1,83 @@
+#!/bin/bash
+#Author: Rajarshi Haldar
+#Date:L April 25,2018
+#Purpose: Find out all the dependency installer of a particular application e.g. apache2
+#Version: 2.0
+
+#Check for argument
+if [ $# -eq 0 ]
+then
+    	echo "No arguments supplied"
+	echo "Usage : ./depcheck <application name>"
+	exit 1
+fi
+
+#Check for Debian 
+if [[ $(lsb_release -si) != "Debian" ]]
+then
+	echo "This script only works on Debian currently"
+	exit 1
+fi
+
+#Check for ubuntu
+
+
+#command aggregator
+if [[ ! $(which apt-file 2>/dev/null) ]]; #apt-file command is required for this script
+then
+	echo "Please install apt-file"
+	exit 1
+else
+	a="$(which apt-file)"
+fi
+
+if [[ ! $(which awk 2>/dev/null) ]]; #awk is required for this script
+then
+	echo "Please install awk"
+        exit 1
+else
+	b="$(which awk)"
+fi
+
+if [[ ! $(which grep 2>/dev/null) ]]; #grep is required for this script
+then
+        echo "Please install grep"
+        exit 1
+else
+	g="$(which grep)"
+fi
+f="$(which find)"
+s="$(which sed)"
+x=`$a list $1 | $b '{print $2}'`
+r="$(which rm)"
+
+#Cleaning up dirts
+$r exec dynamicexecs
+echo "Searching for library files and executables..."
+
+for k in ${x}
+do
+	if [[ -f ${k} ]]
+	then
+		#Searching for library files...
+		$f $k -exec file {} \; | $g "ELF 64-bit LSB shared object" | $b '{print $1}' | $s 's/.$//' >> exec
+		#Searching for executables....
+		$f $k -exec file {} \; | $g "ELF 64-bit LSB executable" | $b '{print $1}' | $s 's/.$//' >> exec
+	fi
+done
+echo "done ..."
+
+echo "Searching for dependencies...."	
+cat exec | while read libs;
+                                        do
+                                                #ldd $libs
+                                                #if [[ $? -eq 0 ]];
+                                                #then
+                                                        ldd $libs >> dynamicexecs
+                                                #fi
+                                        done
+
+echo "Searching for the dependecy installer..."
+echo "Here is the list : "
+cat dynamicexecs | awk -F"=>" '{print $2}' | cut -f2 -d" " | xargs dpkg -S | cut -f1 -d":" | sort | uniq
+$r exec dynamicexecs
